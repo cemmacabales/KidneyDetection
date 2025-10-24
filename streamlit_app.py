@@ -557,23 +557,35 @@ def show_model_page():
         
         with col1:
             st.markdown("""
-            ### Training Configuration
+            ### YOLO Model Technical Details
+
+            Initialize and train YOLO for kidney segmentation:
+
+            ```python
+            # Initialize the YOLO model 
+            # ⚠️ Use the appropriate checkpoint: 
+            # - yolo12n.pt       → for object detection 
+            # - yolo11n-seg.pt   → for object segmentation 
+            model = YOLO("C:/Users/ASUS PC/Desktop/Yolo12_Kidney_Disease_coronal/yolov12/yolo11n-seg.pt") 
             
-            **Optimization**:
-            - Optimizer: Adam with learning rate scheduling
-            - Initial Learning Rate: 0.001
-            - Batch Size: 32
-            - Epochs: 100 with early stopping
-            
-            **Regularization**:
-            - Dropout: 0.3 in dense layers
-            - L2 Regularization: 0.001
-            - Data Augmentation: Real-time
-            
-            **Loss Function**:
-            - Categorical Cross-entropy
-            - Class weight balancing
-            - Focal loss for hard examples
+            # Train the model 
+            results = model.train( 
+                data='C:/Users/ASUS PC/Desktop/Yolo12_Kidney_Disease_coronal/data.yaml',  # dataset config file 
+                epochs=1000,       # maximum epochs (early stopping may end sooner) 
+                patience=15,       # stop if no improvement for 15 epochs 
+                batch=8,           # batch size 
+                imgsz=640,         # input image size 
+                scale=0.5,         # data augmentation scaling 
+                mosaic=1.0,        # mosaic augmentation probability 
+                mixup=0.0,         # mixup probability 
+                copy_paste=0.1,    # copy-paste augmentation probability 
+                close_mosaic=10,   # disable mosaic augmentation in the last 10 epochs 
+                device="0",        # set to "0" for GPU, "cpu" for CPU 
+                save=True          # save both best.pt and last.pt 
+                
+                
+            ) 
+            ```
             """)
         
         with col2:
