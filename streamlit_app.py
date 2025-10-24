@@ -478,41 +478,61 @@ def show_model_page():
         
         with col1:
             st.markdown("""
-            ### Convolutional Neural Network Design
+            ### YOLOv12 Architecture
             
-            Our model uses a sophisticated CNN architecture optimized for medical imaging:
+            YOLOv12 is optimized for real-time detection and segmentation with modern attention and fusion modules tailored for 640×640 inputs.
             
-            **Base Architecture**: ResNet-50 with medical imaging adaptations
+            **Pipeline Overview**
+            - Input: `640×640×3` image
+            - Initial Conv: stride 2
+            - Backbone: `C3k3` blocks with `R-ELAN`
+            - Feature Pyramid:
+              - `P3 (80×80×256)` with Area Attention
+              - `P4 (40×40×512)` with FlashAttention
+              - `P5 (20×20×1024)` with Position Perceiver
+            - Neck:
+              - Upsample `P5 → P4`, concat (`A2C2F` fusion)
+              - Upsample `P4 → P3`, concat (`C3K2` process)
+            - Final Path: Downsample `7×7` Separable Conv + `C3K2`
+            - Detection Head: classification + localization
             
-            **Layer Structure**:
-            - Input Layer: 224x224x3 (RGB) or 224x224x1 (Grayscale)
-            - Convolutional Blocks: 5 residual blocks
-            - Feature Maps: 64, 128, 256, 512, 1024
-            - Global Average Pooling
-            - Dense Layers: 512, 256, 128 neurons
-            - Output Layer: Multi-class classification
+            **Flow (schematic)**
+            ```
+            Input 640x640x3
+                ↓ Conv stride 2
+                ↓ Backbone: C3k3 (R-ELAN)
+                ↘             ↘             ↘
+              P3: Area Attn  P4: FlashAttn  P5: Position Perceiver
+                                  ↑            
+                           Upsample P5→P4 → Concat (A2C2F)
+                                  ↑
+                           Upsample P4→P3 → Concat (C3K2)
+                                  ↓
+                    Downsample 7×7 SepConv + C3K2
+                                  → Detection Head (cls + loc)
+            ```
             
-            **Activation Functions**:
-            - ReLU for hidden layers
-            - Softmax for output classification
-            - Batch normalization between layers
+            **Why YOLOv12**
+            - Attention-guided features (Area, Flash, Perceiver) improve representational power.
+            - Efficient neck with feature fusion for multi-scale targets.
+            - Real-time friendly while supporting segmentation heads.
+            
             """)
         
         with col2:
             st.info("""
-            **Model Variants**
+            **YOLO Modes & Checkpoints**
             
-            🔹 **Coronal Model**
-            - Optimized for front-back views
-            - Specialized feature extraction
+            - Detection: `yolo12n.pt`
+            - Segmentation: `yolo11n-seg.pt`
             
-            🔹 **Axial Model**  
-            - Tuned for cross-sections
-            - Enhanced edge detection
+            **Typical Settings**
+            - Input size: `640`
+            - Anchor-free detection head
+            - Multi-scale training recommended
             
-            🔹 **Ensemble Model**
-            - Combines both views
-            - Improved accuracy
+            **References**
+            - Ultralytics YOLOv12 overview (see provided reference)
             """)
     
     with tab2:
