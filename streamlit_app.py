@@ -5,6 +5,7 @@ from PIL import Image
 import io
 import base64
 from typing import Optional, Tuple, Dict, Any
+import datasetvalues as dv
 
 # Configure page
 st.set_page_config(
@@ -428,123 +429,41 @@ def show_dataset_page():
     This section provides comprehensive information about the kidney abnormality detection dataset used for training and validation of the deep learning models. The dataset comprises multi-center CT scan images with expert annotations for various kidney pathologies.
     """)
     
-    tab1, tab2, tab3 = st.tabs(["Dataset Preparation", "Dataset Configuration", "Preprocessing Pipeline & Data Augmentation"])
+    tab1, tab2 = st.tabs(["Dataset Preparation", "Dataset Configuration"])
     
     with tab1:
         st.subheader("Dataset Preparation")
         
         # Dataset Summary Table
         st.markdown("### Dataset Summary")
-        dataset_summary = pd.DataFrame({
-            'Category': ['Total Images', 'Training Set', 'Validation Set', 'Test Set', 'Medical Centers', 'Patient Demographics'],
-            'Count/Details': ['TBD', 'TBD (70%)', 'TBD (15%)', 'TBD (15%)', 'TBD', 'Age: TBD, Gender: TBD'],
-            'Notes': ['Complete dataset size', 'Used for model training', 'Used for hyperparameter tuning', 'Used for final evaluation', 'Multi-institutional data', 'Demographic distribution']
-        })
+        dataset_summary = pd.DataFrame(dv.dataset_summary)
         st.dataframe(dataset_summary, use_container_width=True)
         
         # Image View Distribution
         st.markdown("### Image View Distribution")
-        view_distribution = pd.DataFrame({
-            'View Type': ['Coronal View', 'Axial View', 'Mixed Views'],
-            'Count': ['TBD', 'TBD', 'TBD'],
-            'Percentage': ['TBD%', 'TBD%', 'TBD%'],
-            'Description': [
-                'Front-to-back kidney perspective',
-                'Cross-sectional kidney slices', 
-                'Combined view analysis'
-            ]
-        })
+        view_distribution = pd.DataFrame(dv.view_distribution)
         st.dataframe(view_distribution, use_container_width=True)
         
         # Pathology Distribution
         st.markdown("### Pathology Distribution")
-        pathology_data = pd.DataFrame({
-            'Pathology Type': ['Normal', 'Kidney Stones', 'Cysts', 'Tumors', 'Structural Abnormalities', 'Other Conditions'],
-            'Training Count': ['TBD', 'TBD', 'TBD', 'TBD', 'TBD', 'TBD'],
-            'Validation Count': ['TBD', 'TBD', 'TBD', 'TBD', 'TBD', 'TBD'],
-            'Test Count': ['TBD', 'TBD', 'TBD', 'TBD', 'TBD', 'TBD'],
-            'Severity Levels': ['N/A', 'Mild/Moderate/Severe', 'Simple/Complex', 'Benign/Malignant', 'Various', 'Various']
-        })
+        pathology_data = pd.DataFrame(dv.pathology_distribution)
         st.dataframe(pathology_data, use_container_width=True)
     
-    with tab2:
-        st.subheader("Dataset Configuration")
-        
-        # Data Collection Parameters
-        st.markdown("### Data Collection Parameters")
-        collection_params = pd.DataFrame({
-            'Parameter': ['Image Resolution', 'Slice Thickness', 'Pixel Spacing', 'Contrast Enhancement', 'Acquisition Protocol'],
-            'Specification': ['TBD x TBD pixels', 'TBD mm', 'TBD mm/pixel', 'TBD', 'TBD'],
-            'Range/Variation': ['TBD - TBD', 'TBD - TBD mm', 'TBD - TBD mm/pixel', 'With/Without', 'Standard/Modified'],
-            'Quality Criteria': ['Min TBD x TBD', 'Max TBD mm', 'Standardized', 'Documented', 'Validated']
-        })
-        st.dataframe(collection_params, use_container_width=True)
-        
-        # Inclusion/Exclusion Criteria
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("""
-            ### Inclusion Criteria
-            - **Age Range**: TBD years
-            - **Image Quality**: High resolution CT scans
-            - **Pathology Confirmation**: Histologically confirmed cases
-            - **Complete Studies**: Full kidney coverage
-            - **Expert Annotation**: Radiologist-verified labels
-            - **Consent**: Proper patient consent obtained
-            """)
-        
-        with col2:
-            st.markdown("""
-            ### Exclusion Criteria
-            - **Poor Image Quality**: Motion artifacts, low resolution
-            - **Incomplete Studies**: Partial kidney coverage
-            - **Uncertain Diagnosis**: Ambiguous pathology
-            - **Previous Surgery**: Post-surgical anatomy
-            - **Contrast Allergies**: Contraindicated studies
-            - **Pediatric Cases**: Age below TBD years
-            """)
-        
-        # Dataset Configuration Table
-        st.markdown("### Dataset Configuration")
-        config_data = pd.DataFrame({
-            'Configuration Item': ['Train/Val/Test Split', 'Cross-Validation Folds', 'Stratification Method', 'Random Seed', 'Batch Size', 'Data Loading'],
-            'Value': ['TBD/TBD/TBD', 'TBD-fold', 'TBD', 'TBD', 'TBD', 'TBD'],
-            'Rationale': ['Standard ML practice', 'Robust evaluation', 'Balanced distribution', 'Reproducibility', 'Memory optimization', 'Efficient processing']
-        })
-        st.dataframe(config_data, use_container_width=True)
-    
-    with tab3:
-        st.subheader("Preprocessing Pipeline & Data Augmentation")
-        
-        # Preprocessing Steps
+    with tab2:    
+        # Removed Data Collection Parameters, Inclusion and Exclusion Criteria by request
+        # Removed Dataset Configuration table by request
+
+        # Image Preprocessing Steps (moved here)
         st.markdown("### Image Preprocessing Steps")
-        preprocessing_steps = pd.DataFrame({
-            'Step': ['1. Quality Assessment', '2. Format Standardization', '3. Intensity Normalization', '4. Spatial Standardization', '5. Augmentation', '6. Final Validation'],
-            'Process': ['Image quality scoring', 'DICOM to standard format', 'Intensity windowing', 'Resize and padding', 'Geometric transforms', 'Quality check'],
-            'Parameters': ['TBD criteria', 'TBD format', 'Window: TBD HU', 'Size: TBD x TBD', 'Rotation: ±TBD°', 'Final QC'],
-            'Output': ['Quality score', 'Standardized format', 'Normalized intensity', 'Fixed dimensions', 'Augmented dataset', 'Clean dataset']
-        })
+        preprocessing_steps = pd.DataFrame(dv.preprocessing_steps)
         st.dataframe(preprocessing_steps, use_container_width=True)
-        
-        # Augmentation Techniques
-        st.markdown("### Data Augmentation Techniques")
-        augmentation_data = pd.DataFrame({
-            'Technique': ['Rotation', 'Scaling', 'Translation', 'Brightness', 'Contrast', 'Noise Addition'],
-            'Range': ['±TBD degrees', 'TBD - TBD', '±TBD pixels', '±TBD%', '±TBD%', 'Gaussian σ=TBD'],
-            'Probability': ['TBD%', 'TBD%', 'TBD%', 'TBD%', 'TBD%', 'TBD%'],
-            'Purpose': ['Rotation invariance', 'Scale invariance', 'Position invariance', 'Illumination robustness', 'Contrast robustness', 'Noise robustness']
-        })
-        st.dataframe(augmentation_data, use_container_width=True)
-        
-        # Normalization Parameters
-        st.markdown("### Normalization Parameters")
-        norm_params = pd.DataFrame({
-            'Parameter': ['Intensity Window', 'Mean Subtraction', 'Standard Deviation', 'Pixel Value Range', 'Z-Score Normalization'],
-            'Value': ['[TBD, TBD] HU', 'TBD', 'TBD', '[TBD, TBD]', 'μ=TBD, σ=TBD'],
-            'Application': ['CT windowing', 'Zero centering', 'Unit variance', 'Value scaling', 'Statistical normalization']
-        })
-        st.dataframe(norm_params, use_container_width=True)
+
+        # Data Augmentation Settings (moved here)
+        st.markdown("### Data Augmentation Settings")
+        augmentation_settings = pd.DataFrame(dv.augmentation_settings)
+        st.dataframe(augmentation_settings, use_container_width=True)
+    
+    # Note: Preprocessing and augmentation moved into the 'Dataset Configuration' tab.
 
 def show_model_page():
     """Display the Model page."""
