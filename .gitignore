@@ -1,0 +1,14 @@
+# Ignore local virtual environment
+venv/
+
+# Ignore Python cache and logs
+__pycache__/
+*.pyc
+*.pyo
+*.log
+
+# macOS metadata
+.DS_Store
+
+# Ignore the PDF document
+Kidney Detection - IEEE.pdf
