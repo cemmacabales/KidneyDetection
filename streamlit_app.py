@@ -96,6 +96,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Sidebar title
+st.sidebar.title("Kidney Abnormality Detection")
+
 class KidneyDetectionApp:
     """Main application class for kidney abnormality detection."""
     
@@ -256,167 +259,146 @@ class KidneyDetectionApp:
         st.markdown('</div>', unsafe_allow_html=True)
 
 def show_about_page():
-    """Display the About page."""
+    """Display the About page with revised research-based content."""
     st.markdown('<h1 class="main-header"><i class="fas fa-info-circle section-icon"></i>About</h1>', unsafe_allow_html=True)
-    
-    # Abstract and Introduction
+
+    # Abstract
     st.markdown("""
     ## Abstract
-    
-    This research presents an automated kidney abnormality detection system using deep learning techniques for medical image analysis. The system employs convolutional neural networks (CNNs) to identify and classify various kidney pathologies from CT scan images, achieving high accuracy in detecting conditions such as kidney stones, cysts, tumors, and structural abnormalities.
+
+    This study introduces an automated **Kidney Abnormality Detection System** utilizing **YOLOv12**, a state-of-the-art deep learning model for medical image analysis. 
+    The system employs **Convolutional Neural Networks (CNNs)** to identify and classify kidney abnormalities — including **stones, cysts, and tumors** — from **Computed Tomography (CT)** images. 
+    Using a clinically validated dataset of over **12,000 CT scans**, the model was trained and enhanced through **data augmentation** to improve robustness and class balance. 
+    The system achieved a high **mean Average Precision (mAP)** across multiple Intersection over Union (IoU) thresholds, confirming its diagnostic reliability. 
+    Overall, this research aims to assist healthcare professionals by providing **real-time, AI-powered diagnostic support** that enhances accuracy, consistency, and early disease detection.
     """)
-    
-    # Main content in tabs
+
+    # Tabs
     tab1, tab2, tab3, tab4 = st.tabs(["Introduction", "Methodology", "System Features", "Clinical Impact"])
-    
+
+    # Introduction Tab
     with tab1:
         st.markdown("""
+        ### Background and Motivation
+
+        Kidney diseases — such as **stones, cysts, and tumors** — are among the most prevalent urological conditions worldwide. 
+        Accurate and early detection of these abnormalities is crucial for improving treatment outcomes and patient survival rates. 
+        However, manual interpretation of CT scans is **time-consuming**, **error-prone**, and dependent on radiologist expertise.
+
         ### Research Objectives
-        
-        The primary objectives of this kidney abnormality detection system are:
-        
-        1. **Early Detection**: Develop an automated system for early identification of kidney abnormalities
-        2. **Diagnostic Assistance**: Provide healthcare professionals with AI-powered diagnostic support
-        3. **Accuracy Improvement**: Achieve high sensitivity and specificity in abnormality detection
-        4. **Workflow Integration**: Create a user-friendly interface for clinical workflow integration
-        
-        ### Problem Statement
-        
-        Kidney diseases affect millions of people worldwide, and early detection is crucial for effective treatment. Traditional manual analysis of medical images is:
-        - Time-consuming and labor-intensive
-        - Subject to human error and variability
-        - Limited by radiologist availability
-        - Inconsistent across different medical centers
-        
-        ### Solution Approach
-        
-        Our AI-powered system addresses these challenges by:
-        - Automating the detection process using deep learning
-        - Providing consistent and objective analysis
-        - Reducing diagnostic time from hours to seconds
-        - Supporting multiple image view types (coronal and axial)
+        1. **Early Detection** — Enable prompt identification of kidney abnormalities through AI-powered analysis.  
+        2. **Diagnostic Assistance** — Provide healthcare professionals with automated support for clinical decision-making.  
+        3. **High Accuracy** — Utilize YOLOv12’s advanced feature extraction to enhance diagnostic precision.  
+        4. **Workflow Integration** — Deliver a user-friendly system suitable for integration with hospital workflows.
+
+        ### Significance
+        The proposed solution addresses the limitations of traditional diagnosis by automating kidney abnormality detection with deep learning, ensuring faster and more consistent results while reducing radiologist workload.
         """)
-    
+
+    # Methodology Tab
     with tab2:
         st.markdown("""
-        ### Technical Methodology
-        
-        #### 1. Data Acquisition and Preprocessing
-        - **Image Sources**: Multi-center CT scan datasets
-        - **Quality Control**: Automated image quality assessment
-        - **Standardization**: DICOM format processing and normalization
-        - **Augmentation**: Rotation, scaling, and intensity variations
-        
-        #### 2. Deep Learning Architecture
-        - **Base Model**: Modified ResNet-50 architecture
-        - **Customization**: Medical imaging-specific adaptations
-        - **Multi-class Classification**: Normal, stones, cysts, tumors, structural abnormalities
-        - **Transfer Learning**: Pre-trained weights with fine-tuning
-        
-        #### 3. Training Strategy
-        - **Cross-validation**: 5-fold stratified validation
-        - **Loss Function**: Weighted categorical cross-entropy
-        - **Optimization**: Adam optimizer with learning rate scheduling
-        - **Regularization**: Dropout, batch normalization, early stopping
-        
-        #### 4. Evaluation Metrics
-        - **Primary**: Accuracy, Sensitivity, Specificity
-        - **Secondary**: Precision, Recall, F1-score, AUC-ROC
-        - **Clinical**: False positive/negative rates
+        ### Dataset Preparation
+
+        The dataset consists of **12,446 CT images** obtained via the **Picture Archiving and Communication System (PACS)**. 
+        Each sample was verified to represent one of four diagnostic classes: **normal**, **cyst**, **stone**, or **tumor**.  
+        After cleaning and augmentation, the dataset was divided into **70% training**, **10% validation**, and **20% testing**.
+
+        #### Data Augmentation Techniques
+        - Brightness variation (±25%)  
+        - Gaussian blur (≤0.8 px)  
+        - Random noise addition (≤0.54%)  
+
+        ### Model Architecture
+
+        The system utilizes **YOLOv12**, the latest evolution of the YOLO family.  
+        It integrates **multi-scale feature fusion** and **FlashAttention** mechanisms to improve small-object detection and reduce computational cost.
+
+        #### Training Process
+        - **Input Size:** 640×640 pixels  
+        - **Optimizer:** Adam with learning rate decay  
+        - **Loss Function:** Bounding box regression + cross-entropy  
+        - **Batch Size:** 16  
+        - **Epochs:** 100  
+        - **Evaluation Metric:** mean Average Precision (mAP@[0.5:0.95])
+
+        The system achieved strong performance in detecting and classifying multiple renal abnormalities, validating its capability for clinical deployment.
         """)
-    
+
+    # System Features Tab
     with tab3:
-        col1, col2 = st.columns([1, 1])
-        
+        col1, col2 = st.columns(2)
+
         with col1:
             st.markdown("""
-            ### System Capabilities
-            
-            **<i class="fas fa-eye feature-icon"></i> Multi-View Analysis**
-            - Coronal view processing
-            - Axial view processing
-            - View-specific model optimization
-            
-            **<i class="fas fa-brain feature-icon"></i> AI-Powered Detection**
-            - Deep learning classification
-            - Confidence scoring
-            - Abnormality localization
-            
-            **<i class="fas fa-clock feature-icon"></i> Real-Time Processing**
-            - Sub-second inference time
-            - Batch processing capability
-            - GPU acceleration support
-            
-            **<i class="fas fa-chart-line feature-icon"></i> Performance Metrics**
-            - 92.5% overall accuracy
-            - 89.3% sensitivity
-            - 94.7% specificity
-            - 91.2% F1-score
+            ### Core System Features
+
+            **<i class="fas fa-brain feature-icon"></i> AI-Powered Detection**  
+            - Detects and classifies kidney stones, cysts, and tumors automatically.  
+            - Uses YOLOv12 for real-time performance with high precision.  
+
+            **<i class="fas fa-sync feature-icon"></i> Automated Workflow**  
+            - Supports both **coronal** and **axial** CT image views.  
+            - Automatically preprocesses and analyzes uploaded scans.  
+
+            **<i class="fas fa-tachometer-alt feature-icon"></i> Real-Time Processing**  
+            - Performs detection in seconds per image.  
+            - Suitable for integration in clinical screening systems.
             """, unsafe_allow_html=True)
-        
+
         with col2:
             st.markdown("""
-            ### Technical Specifications
-            
-            **<i class="fas fa-file-image feature-icon"></i> Supported Formats**
-            - PNG, JPG, JPEG
-            - TIFF, BMP
-            - DICOM (future support)
-            
-            **<i class="fas fa-database feature-icon"></i> System Requirements**
-            - Maximum file size: 10MB
-            - Minimum resolution: 224x224
-            - Color depth: 8-bit or higher
-            
-            **<i class="fas fa-shield-alt feature-icon"></i> Quality Assurance**
-            - Input validation
-            - Error handling
-            - Result verification
-            
-            **<i class="fas fa-users-cog feature-icon"></i> User Interface**
-            - Intuitive web interface
-            - Progress indicators
-            - Detailed result visualization
+            ### Technical Capabilities
+
+            **<i class="fas fa-database feature-icon"></i> Dataset Handling**  
+            - Over 12,000 CT images  
+            - Augmentation for balanced class distribution  
+
+            **<i class="fas fa-cogs feature-icon"></i> Model Flexibility**  
+            - Transferable architecture for other imaging modalities  
+            - Configurable thresholds for precision vs. recall tuning  
+
+            **<i class="fas fa-desktop feature-icon"></i> Web Interface**  
+            - User-friendly dashboard built with Streamlit  
+            - Displays results, confidence scores, and severity level  
             """, unsafe_allow_html=True)
-    
+
+    # Clinical Impact Tab
     with tab4:
         st.markdown("""
-        ### Clinical Applications
-        
-        #### Primary Use Cases
-        1. **Screening Programs**: Mass screening for kidney abnormalities
-        2. **Emergency Medicine**: Rapid assessment in acute care settings
-        3. **Routine Checkups**: Regular monitoring of kidney health
-        4. **Second Opinion**: Validation of initial diagnoses
-        
+        ### Clinical Implications
+
+        The integration of deep learning models like YOLOv12 into medical workflows enhances diagnostic precision and accelerates the detection of renal abnormalities.
+
         #### Benefits for Healthcare Providers
-        - **Efficiency**: Reduced analysis time from hours to seconds
-        - **Consistency**: Standardized evaluation criteria
-        - **Accessibility**: 24/7 availability for analysis
-        - **Cost-Effective**: Reduced need for specialist consultations
-        
-        #### Patient Benefits
-        - **Early Detection**: Improved outcomes through early intervention
-        - **Reduced Wait Times**: Faster diagnostic results
-        - **Objective Analysis**: Consistent evaluation standards
-        - **Treatment Planning**: Better informed treatment decisions
-        
-        ### Future Developments
-        
-        - **3D Volume Analysis**: Full volumetric assessment
-        - **Multi-Modal Integration**: Combining CT, MRI, and ultrasound
-        - **Longitudinal Tracking**: Disease progression monitoring
-        - **Clinical Decision Support**: Treatment recommendation system
+        - **Reduced Diagnostic Time:** AI-assisted analysis delivers results in seconds.  
+        - **Consistency:** Minimizes inter-observer variability.  
+        - **Scalability:** Suitable for hospitals and remote diagnostic centers.  
+        - **Decision Support:** Aids clinicians in early diagnosis and treatment planning.  
+
+        #### Benefits for Patients
+        - **Early Detection:** Improved prognosis through timely identification.  
+        - **Accessibility:** Reduces dependency on radiologist availability.  
+        - **Lower Costs:** Cuts down on manual diagnostic labor.  
+
+        ### Future Directions
+        - Incorporation of **3D CT reconstruction** for volumetric lesion detection  
+        - Expansion to **multi-modal imaging** (CT + MRI + Ultrasound)  
+        - Development of **real-time clinical decision support** dashboards  
+        - Continuous retraining for adaptive accuracy in diverse patient datasets
         """)
-    
-    # Medical Disclaimer
+
+    # Disclaimer
     st.markdown("---")
     st.markdown("""
     **<i class="fas fa-exclamation-triangle warning-icon"></i> Important Medical Disclaimer**
     """, unsafe_allow_html=True)
     st.warning("""
-    This system is designed for research and educational purposes. It should be used as a diagnostic aid only and not as a replacement for professional medical judgment. All results should be reviewed and validated by qualified healthcare professionals before making any clinical decisions.
+    This system is designed for research and educational purposes. 
+    It should not be used as a standalone diagnostic tool. 
+    All results must be reviewed and validated by licensed healthcare professionals before any medical decision-making.
     """)
+
 
 def show_dataset_page():
     """Display the Dataset page."""
