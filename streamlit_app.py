@@ -362,7 +362,7 @@ class KidneyDetectionApp:
         colors = {
             'kidney': 'red',
             'cyst': 'blue', 
-            'stone': 'yellow',
+            'stone': 'orange',
             'tumor': 'purple'
         }
         
@@ -1017,7 +1017,7 @@ def show_detection_page():
             **Detection Color Legend:**
             - 🔴 **Red**: Kidney
             - 🔵 **Blue**: Cyst  
-            - 🟡 **Yellow**: Stone
+            - 🟠 **Orange**: Stone
             - 🟣 **Purple**: Tumor
             """)
             
