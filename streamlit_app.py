@@ -181,7 +181,6 @@ class KidneyDetectionApp:
         Returns:
             Tuple of (annotated_image, detections_list)
         """
-        import cv2
         from PIL import ImageDraw, ImageFont
         
         # Convert PIL to numpy array and handle channel conversion
@@ -399,7 +398,7 @@ class KidneyDetectionApp:
             img_array = np.mean(img_array, axis=2)  # Convert to grayscale if needed
         
         # Resize to standard size (adjust based on your model)
-        # img_resized = cv2.resize(img_array, (224, 224))
+        # img_resized = np.resize(img_array, (224, 224))
         # img_normalized = img_resized / 255.0
         
         return img_array
@@ -474,7 +473,7 @@ class KidneyDetectionApp:
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            st.image(image, caption=f"Uploaded {results['view_type'].title()} View", use_container_width=True)
+            st.image(image, caption=f"Uploaded {results['view_type'].title()} View", width="stretch")
         
         with col2:
             # Detection status
@@ -985,7 +984,7 @@ def show_detection_page():
             col_result1, col_result2 = st.columns([3, 1])
             
             with col_result1:
-                st.image(annotated_image, caption="Processed Image", use_container_width=True)
+                st.image(annotated_image, caption="Processed Image", width="stretch")
             
             with col_result2:
                 # Detection summary
