@@ -1,13 +1,24 @@
 streamlit>=1.28.0
-numpy>=1.24.0
+numpy>=1.24.0,<2.0.0
 pandas>=2.0.0
 Pillow>=10.0.0
 typing-extensions>=4.5.0
 
-# YOLO model dependencies
-ultralytics>=8.0.0
-torch>=2.0.0
-torchvision>=0.15.0
+# Core dependencies for ultralytics
+PyYAML>=6.0
+requests>=2.31.0
+scipy>=1.10.0
+psutil
+tqdm>=4.64.0
+
+# ML dependencies - specific versions for Streamlit Cloud compatibility
+torch>=2.0.0,<2.2.0
+torchvision>=0.15.0,<0.17.0
+
+# YOLO model - using a version known to work on Streamlit Cloud
+ultralytics==8.0.20
+
+# Image processing
 scikit-image>=0.21.0
 matplotlib>=3.7.0
 seaborn>=0.12.0
