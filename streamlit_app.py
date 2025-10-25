@@ -227,7 +227,12 @@ class KidneyDetectionApp:
         # Convert PIL to numpy array and handle channel conversion
         img_array = np.array(image)
         
-        # Handle grayscale to RGB conversion for YOLO models
+        # Ensure we have a valid image array
+        if img_array.size == 0:
+            st.error("❌ Invalid image: Empty image array")
+            return image, []
+        
+        # Handle different image formats for YOLO models (expects 3 channels RGB)
         if len(img_array.shape) == 2:  # Grayscale image
             # Convert grayscale to RGB by duplicating the channel
             img_array = np.stack([img_array, img_array, img_array], axis=-1)
@@ -236,6 +241,19 @@ class KidneyDetectionApp:
             # Convert single channel to RGB
             img_array = np.repeat(img_array, 3, axis=2)
             st.info("ℹ️ Converted single-channel image to RGB for YOLO processing")
+        elif len(img_array.shape) == 3 and img_array.shape[2] == 4:  # RGBA image
+            # Convert RGBA to RGB by removing alpha channel
+            img_array = img_array[:, :, :3]
+            st.info("ℹ️ Converted RGBA image to RGB for YOLO processing (removed alpha channel)")
+        elif len(img_array.shape) == 3 and img_array.shape[2] > 4:  # More than 4 channels
+            # Take only the first 3 channels
+            img_array = img_array[:, :, :3]
+            st.info(f"ℹ️ Converted {img_array.shape[2]}-channel image to RGB for YOLO processing")
+        
+        # Final validation: ensure we have exactly 3 channels
+        if len(img_array.shape) != 3 or img_array.shape[2] != 3:
+            st.error(f"❌ Image preprocessing failed: Expected 3 channels, got {img_array.shape}")
+            return image, []
         
         if model is None:
             # Placeholder detection for demo purposes
