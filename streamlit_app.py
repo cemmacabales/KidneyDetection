@@ -107,8 +107,30 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Early check for ultralytics availability
+@st.cache_data
+def check_ultralytics_availability():
+    """Check if ultralytics is available and return status info."""
+    try:
+        import ultralytics
+        return True, f"✅"
+    except ImportError as e:
+        return False, f"❌ ultralytics import failed: {str(e)}"
+    except Exception as e:
+        return False, f"❌ ultralytics error: {str(e)}"
+
+# Check ultralytics status
+ultralytics_available, ultralytics_status = check_ultralytics_availability()
+
 # Sidebar title
 st.sidebar.title("Kidney Abnormality Detection")
+
+# Show ultralytics status in sidebar
+if ultralytics_available:
+    st.sidebar.success(ultralytics_status)
+else:
+    st.sidebar.error(ultralytics_status)
+    st.sidebar.info("🔄 Try refreshing the page if this persists.")
 
 class KidneyDetectionApp:
     """Main application class for kidney abnormality detection."""
@@ -130,8 +152,15 @@ class KidneyDetectionApp:
             YOLO model object or None if not available
         """
         try:
-            from ultralytics import YOLO
             import os
+            
+            # Check if ultralytics is available using our cached function
+            if not ultralytics_available:
+                st.error(f"❌ ultralytics not available: {ultralytics_status}")
+                st.info("💡 This might be a temporary deployment issue. Please try refreshing the page.")
+                return None
+            
+            from ultralytics import YOLO
             
             # Define model paths
             model_dir = "models"
@@ -158,8 +187,10 @@ class KidneyDetectionApp:
             
             return self.coronal_model if view_type == 'coronal' else self.axial_model
             
-        except ImportError:
-            st.error("❌ ultralytics package not installed. Please install it: pip install ultralytics")
+        except ImportError as e:
+            st.error(f"❌ ultralytics package import failed: {str(e)}")
+            st.info("💡 This might be a temporary deployment issue. Please try refreshing the page.")
+            st.code("pip install ultralytics", language="bash")
             return None
         except Exception as e:
             st.error(f"❌ Error loading {view_type} model: {str(e)}")
@@ -669,17 +700,17 @@ def show_dataset_page():
         # Dataset Summary Table
         st.markdown("### Dataset Summary")
         dataset_summary = pd.DataFrame(dv.dataset_summary)
-        st.dataframe(dataset_summary, use_container_width=True)
+        st.dataframe(dataset_summary, width="stretch")
         
         # Image View Distribution
         st.markdown("### Image View Distribution")
         view_distribution = pd.DataFrame(dv.view_distribution)
-        st.dataframe(view_distribution, use_container_width=True)
+        st.dataframe(view_distribution, width="stretch")
         
         # Pathology Distribution
         st.markdown("### Pathology Distribution")
         pathology_data = pd.DataFrame(dv.pathology_distribution)
-        st.dataframe(pathology_data, use_container_width=True)
+        st.dataframe(pathology_data, width="stretch")
     
     with tab2:    
         # Removed Data Collection Parameters, Inclusion and Exclusion Criteria by request
@@ -688,12 +719,12 @@ def show_dataset_page():
         # Image Preprocessing Steps (moved here)
         st.markdown("### Image Preprocessing Steps")
         preprocessing_steps = pd.DataFrame(dv.preprocessing_steps)
-        st.dataframe(preprocessing_steps, use_container_width=True)
+        st.dataframe(preprocessing_steps, width="stretch")
 
         # Data Augmentation Settings (moved here)
         st.markdown("### Data Augmentation Settings")
         augmentation_settings = pd.DataFrame(dv.augmentation_settings)
-        st.dataframe(augmentation_settings, use_container_width=True)
+        st.dataframe(augmentation_settings, width="stretch")
     
     # Note: Preprocessing and augmentation moved into the 'Dataset Configuration' tab.
 
@@ -873,19 +904,19 @@ def main():
         st.markdown('### <i class="fas fa-compass nav-icon"></i>Navigation', unsafe_allow_html=True)
         
         # Navigation buttons
-        if st.button("Detection", use_container_width=True, type="primary" if st.session_state.current_page == 'detection' else "secondary", key="nav_detection"):
+        if st.button("Detection", width="stretch", type="primary" if st.session_state.current_page == 'detection' else "secondary", key="nav_detection"):
             st.session_state.current_page = 'detection'
             st.rerun()
         
-        if st.button("About", use_container_width=True, type="primary" if st.session_state.current_page == 'about' else "secondary", key="nav_about"):
+        if st.button("About", width="stretch", type="primary" if st.session_state.current_page == 'about' else "secondary", key="nav_about"):
             st.session_state.current_page = 'about'
             st.rerun()
         
-        if st.button("Dataset", use_container_width=True, type="primary" if st.session_state.current_page == 'dataset' else "secondary", key="nav_dataset"):
+        if st.button("Dataset", width="stretch", type="primary" if st.session_state.current_page == 'dataset' else "secondary", key="nav_dataset"):
             st.session_state.current_page = 'dataset'
             st.rerun()
         
-        if st.button("Model", use_container_width=True, type="primary" if st.session_state.current_page == 'model' else "secondary", key="nav_model"):
+        if st.button("Model", width="stretch", type="primary" if st.session_state.current_page == 'model' else "secondary", key="nav_model"):
             st.session_state.current_page = 'model'
             st.rerun()
             
@@ -931,7 +962,7 @@ def show_detection_page():
             
             # Load and display image
             image = Image.open(uploaded_file)
-            st.image(image, caption="Uploaded Image", use_container_width=True)
+            st.image(image, caption="Uploaded Image", width="stretch")
     
     with col2:
         # View type selection
@@ -953,7 +984,7 @@ def show_detection_page():
         analyze_button = st.button(
             "🔍 Analyze Image",
             type="primary",
-            use_container_width=True,
+            width="stretch",
             disabled=uploaded_file is None
         )
     
