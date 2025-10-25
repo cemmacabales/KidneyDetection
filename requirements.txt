@@ -4,6 +4,9 @@ pandas>=2.0.0
 Pillow>=10.0.0
 typing-extensions>=4.5.0
 
+# OpenCV headless version for cloud deployment (must be before ultralytics)
+opencv-python-headless>=4.8.0
+
 # YOLO model dependencies
 ultralytics>=8.0.0
 torch>=2.0.0

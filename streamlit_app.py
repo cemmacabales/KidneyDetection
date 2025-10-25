@@ -113,11 +113,17 @@ def check_ultralytics_availability():
     """Check if ultralytics is available and return status info."""
     try:
         import ultralytics
-        return True, f"✅"
+        return True, f"✅ ultralytics {ultralytics.__version__} is available"
     except ImportError as e:
-        return False, f"❌ ultralytics import failed: {str(e)}"
+        error_msg = str(e)
+        if "libGL.so.1" in error_msg:
+            return False, "❌ OpenGL library missing - using opencv-python-headless should fix this"
+        return False, f"❌ ultralytics import failed: {error_msg}"
     except Exception as e:
-        return False, f"❌ ultralytics error: {str(e)}"
+        error_msg = str(e)
+        if "libGL.so.1" in error_msg:
+            return False, "❌ OpenGL library missing - deployment environment issue"
+        return False, f"❌ ultralytics error: {error_msg}"
 
 # Check ultralytics status
 ultralytics_available, ultralytics_status = check_ultralytics_availability()
@@ -130,7 +136,11 @@ if ultralytics_available:
     st.sidebar.success(ultralytics_status)
 else:
     st.sidebar.error(ultralytics_status)
-    st.sidebar.info("🔄 Try refreshing the page if this persists.")
+    if "OpenGL library missing" in ultralytics_status:
+        st.sidebar.info("🔧 This is a known deployment issue. The fix has been applied to requirements.txt")
+        st.sidebar.info("🔄 Please redeploy or refresh the page.")
+    else:
+        st.sidebar.info("🔄 Try refreshing the page if this persists.")
 
 class KidneyDetectionApp:
     """Main application class for kidney abnormality detection."""
