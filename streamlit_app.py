@@ -158,9 +158,8 @@ class KidneyDetectionApp:
             
             return self.coronal_model if view_type == 'coronal' else self.axial_model
             
-        except ImportError as e:
-            st.error(f"❌ ultralytics package not installed. Please install it: pip install ultralytics")
-            st.error(f"Import error details: {str(e)}")
+        except ImportError:
+            st.error("❌ ultralytics package not installed. Please install it: pip install ultralytics")
             return None
         except Exception as e:
             st.error(f"❌ Error loading {view_type} model: {str(e)}")
