@@ -4,10 +4,10 @@ pandas>=2.0.0
 Pillow>=10.0.0
 typing-extensions>=4.5.0
 
-# Optional dependencies for future model integration
-# tensorflow>=2.13.0
-# torch>=2.0.0
-# torchvision>=0.15.0
+# YOLO model dependencies
+ultralytics>=8.0.0
+torch>=2.0.0
+torchvision>=0.15.0
 # opencv-python>=4.8.0
 # scikit-image>=0.21.0
 # matplotlib>=3.7.0

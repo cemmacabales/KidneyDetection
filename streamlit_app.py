@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import io
 import base64
 from typing import Optional, Tuple, Dict, Any
@@ -93,6 +93,17 @@ st.markdown("""
         color: #dc3545; /* red */
         margin-right: 6px;
     }
+    
+    /* Disable typing in view type selectbox */
+    div[data-testid="stSelectbox"] input {
+        pointer-events: none;
+        caret-color: transparent;
+    }
+    
+    div[data-testid="stSelectbox"] input:focus {
+        outline: none;
+        caret-color: transparent;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -105,26 +116,266 @@ class KidneyDetectionApp:
     def __init__(self):
         self.supported_formats = ['png', 'jpg', 'jpeg', 'tiff', 'bmp']
         self.max_file_size = 10 * 1024 * 1024  # 10MB
+        self.coronal_model = None
+        self.axial_model = None
         
-    def load_model(self, view_type: str) -> Optional[Any]:
+    def load_yolo_model(self, view_type: str) -> Optional[Any]:
         """
-        Load the appropriate model based on view type.
-        This is a placeholder function for future model integration.
+        Load the appropriate YOLO model based on view type.
         
         Args:
             view_type (str): Either 'coronal' or 'axial'
             
         Returns:
-            Model object or None if not available
+            YOLO model object or None if not available
         """
-        # TODO: Implement actual model loading
-        # Example structure:
-        # if view_type == 'coronal':
-        #     return load_coronal_model()
-        # elif view_type == 'axial':
-        #     return load_axial_model()
-        return None
+        try:
+            from ultralytics import YOLO
+            import os
+            
+            # Define model paths
+            model_dir = "models"
+            coronal_path = os.path.join(model_dir, "coronalBest weights.pt")
+            axial_path = os.path.join(model_dir, "axialBest Weights.pt")
+            
+            if view_type == 'coronal' and self.coronal_model is None:
+                if os.path.exists(coronal_path):
+                    st.info(f"Loading coronal model from {coronal_path}...")
+                    self.coronal_model = YOLO(coronal_path)
+                    st.success("✅ Coronal model loaded successfully!")
+                else:
+                    st.error(f"❌ Coronal model file not found: {coronal_path}")
+                    return None
+                    
+            elif view_type == 'axial' and self.axial_model is None:
+                if os.path.exists(axial_path):
+                    st.info(f"Loading axial model from {axial_path}...")
+                    self.axial_model = YOLO(axial_path)
+                    st.success("✅ Axial model loaded successfully!")
+                else:
+                    st.error(f"❌ Axial model file not found: {axial_path}")
+                    return None
+            
+            return self.coronal_model if view_type == 'coronal' else self.axial_model
+            
+        except ImportError:
+            st.error("❌ ultralytics package not installed. Please install it: pip install ultralytics")
+            return None
+        except Exception as e:
+            st.error(f"❌ Error loading {view_type} model: {str(e)}")
+            return None
     
+    def process_with_yolo(self, image: Image.Image, model: Optional[Any], 
+                         confidence_threshold: float, selected_classes: list,
+                         roi: Tuple[float, float, float, float]) -> Tuple[Image.Image, list]:
+        """
+        Process image with YOLO model and return annotated image with detections.
+        
+        Args:
+            image: PIL Image
+            model: YOLO model (None for placeholder)
+            confidence_threshold: Detection confidence threshold
+            selected_classes: List of classes to detect
+            roi: Region of interest (x_min, y_min, x_max, y_max)
+            
+        Returns:
+            Tuple of (annotated_image, detections_list)
+        """
+        import cv2
+        from PIL import ImageDraw, ImageFont
+        
+        # Convert PIL to numpy array and handle channel conversion
+        img_array = np.array(image)
+        
+        # Handle grayscale to RGB conversion for YOLO models
+        if len(img_array.shape) == 2:  # Grayscale image
+            # Convert grayscale to RGB by duplicating the channel
+            img_array = np.stack([img_array, img_array, img_array], axis=-1)
+            st.info("ℹ️ Converted grayscale image to RGB for YOLO processing")
+        elif len(img_array.shape) == 3 and img_array.shape[2] == 1:  # Single channel
+            # Convert single channel to RGB
+            img_array = np.repeat(img_array, 3, axis=2)
+            st.info("ℹ️ Converted single-channel image to RGB for YOLO processing")
+        
+        if model is None:
+            # Placeholder detection for demo purposes
+            detections = self._generate_placeholder_detections(selected_classes, confidence_threshold)
+        else:
+            # Actual YOLO inference
+            try:
+                # Run YOLO inference
+                results = model(img_array, conf=confidence_threshold, verbose=False)
+                detections = self._parse_yolo_results(results, selected_classes, roi)
+            except Exception as e:
+                st.error(f"❌ Error during YOLO inference: {str(e)}")
+                # Fallback to placeholder
+                detections = self._generate_placeholder_detections(selected_classes, confidence_threshold)
+        
+        # Draw bounding boxes on image
+        annotated_image = self._draw_detections(image, detections, roi)
+        
+        return annotated_image, detections
+    
+    def _generate_placeholder_detections(self, selected_classes: list, confidence: float) -> list:
+        """Generate placeholder detections for demo purposes."""
+        import random
+        
+        detections = []
+        if 'kidney' in selected_classes:
+            detections.append({
+                'class': 'kidney',
+                'confidence': round(random.uniform(confidence, 1.0), 2),
+                'bbox': [0.1, 0.1, 0.9, 0.9]  # x1, y1, x2, y2 (normalized)
+            })
+        if 'stone' in selected_classes:
+            detections.append({
+                'class': 'stone',
+                'confidence': round(random.uniform(confidence, 1.0), 2),
+                'bbox': [0.3, 0.2, 0.5, 0.4]
+            })
+        if 'cyst' in selected_classes:
+            detections.append({
+                'class': 'cyst',
+                'confidence': round(random.uniform(confidence, 1.0), 2),
+                'bbox': [0.6, 0.5, 0.8, 0.7]
+            })
+        if 'tumor' in selected_classes:
+            detections.append({
+                'class': 'tumor',
+                'confidence': round(random.uniform(confidence, 1.0), 2),
+                'bbox': [0.2, 0.6, 0.4, 0.8]
+            })
+        
+        return detections
+    
+    def _parse_yolo_results(self, results, selected_classes: list, roi: Tuple[float, float, float, float]) -> list:
+        """Parse YOLO results and convert to our detection format."""
+        detections = []
+        
+        # YOLO class mapping for kidney detection
+        class_mapping = {
+            0: 'kidney',
+            1: 'cyst', 
+            2: 'stone',
+            3: 'tumor'
+        }
+        
+        try:
+            for result in results:
+                if result.boxes is not None:
+                    boxes = result.boxes
+                    
+                    for i in range(len(boxes)):
+                        # Get bounding box coordinates (normalized)
+                        box = boxes.xyxyn[i].cpu().numpy()  # [x1, y1, x2, y2] normalized
+                        confidence = float(boxes.conf[i].cpu().numpy())
+                        class_id = int(boxes.cls[i].cpu().numpy())
+                        
+                        # Map class ID to class name
+                        class_name = class_mapping.get(class_id, f'class_{class_id}')
+                        
+                        # Filter by selected classes
+                        if class_name in selected_classes:
+                            # Check if detection is within ROI
+                            x1, y1, x2, y2 = box
+                            roi_x1, roi_y1, roi_x2, roi_y2 = roi
+                            
+                            # Check if bounding box center is within ROI
+                            center_x = (x1 + x2) / 2
+                            center_y = (y1 + y2) / 2
+                            
+                            if (roi_x1 <= center_x <= roi_x2 and roi_y1 <= center_y <= roi_y2):
+                                detections.append({
+                                    'class': class_name,
+                                    'confidence': round(confidence, 3),
+                                    'bbox': [float(x1), float(y1), float(x2), float(y2)]
+                                })
+        
+        except Exception as e:
+            st.warning(f"⚠️ Error parsing YOLO results: {str(e)}")
+            
+        return detections
+    
+    def _draw_detections(self, image: Image.Image, detections: list, 
+                        roi: Tuple[float, float, float, float]) -> Image.Image:
+        """Draw bounding boxes and labels on image."""
+        from PIL import ImageDraw, ImageFont
+        
+        # Create a copy of the image and ensure it's in RGB mode for colored annotations
+        annotated_image = image.copy()
+        if annotated_image.mode != 'RGB':
+            annotated_image = annotated_image.convert('RGB')
+        draw = ImageDraw.Draw(annotated_image)
+        
+        # Get image dimensions
+        img_width, img_height = image.size
+        
+        # Draw ROI rectangle
+        x_min, y_min, x_max, y_max = roi
+        roi_coords = [
+            x_min * img_width, y_min * img_height,
+            x_max * img_width, y_max * img_height
+        ]
+        draw.rectangle(roi_coords, outline='green', width=3)
+        
+        # Color map for different classes
+        colors = {
+            'kidney': 'red',
+            'cyst': 'blue', 
+            'stone': 'yellow',
+            'tumor': 'purple'
+        }
+        
+        # Draw detections
+        for detection in detections:
+            bbox = detection['bbox']
+            class_name = detection['class']
+            confidence = detection['confidence']
+            
+            # Convert normalized coordinates to pixel coordinates
+            x1 = bbox[0] * img_width
+            y1 = bbox[1] * img_height
+            x2 = bbox[2] * img_width
+            y2 = bbox[3] * img_height
+            
+            # Draw bounding box with thicker outline
+            color = colors.get(class_name, 'white')
+            draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
+            
+            # Draw label with background for better visibility
+            label = f"{class_name}: {confidence:.2f}"
+            
+            # Try to load a font, fallback to default if not available
+            try:
+                font = ImageFont.truetype("Arial.ttf", 16)
+            except:
+                font = ImageFont.load_default()
+            
+            # Get text size for background rectangle
+            bbox_text = draw.textbbox((0, 0), label, font=font)
+            text_width = bbox_text[2] - bbox_text[0]
+            text_height = bbox_text[3] - bbox_text[1]
+            
+            # Draw background rectangle for text
+            draw.rectangle([x1, y1 - text_height - 4, x1 + text_width + 4, y1], 
+                         fill=color, outline=color)
+            
+            # Draw text in white for contrast
+            draw.text((x1 + 2, y1 - text_height - 2), label, fill='white', font=font)
+        
+        return annotated_image
+    
+    def validate_image(self, uploaded_file) -> Tuple[bool, str]:
+        """Validate uploaded image file."""
+        if uploaded_file.size > self.max_file_size:
+            return False, f"File size ({uploaded_file.size / 1024 / 1024:.1f}MB) exceeds maximum allowed size (10MB)"
+        
+        try:
+            image = Image.open(uploaded_file)
+            return True, "Valid image"
+        except Exception as e:
+            return False, f"Invalid image file: {str(e)}"
+
     def preprocess_image(self, image: Image.Image, view_type: str) -> np.ndarray:
         """
         Preprocess the uploaded image for model prediction.
@@ -223,7 +474,7 @@ class KidneyDetectionApp:
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            st.image(image, caption=f"Uploaded {results['view_type'].title()} View", use_column_width=True)
+            st.image(image, caption=f"Uploaded {results['view_type'].title()} View", use_container_width=True)
         
         with col2:
             # Detection status
@@ -650,85 +901,120 @@ def main():
         show_model_page()
     else:
         # Default detection page
-        show_detection_page(app)
+        show_detection_page()
 
-def show_detection_page(app):
-    """Display the main detection page."""
-    # Header
-    st.markdown('<h1 class="main-header"><i class="fas fa-kidneys section-icon"></i>Kidney Abnormality Detection</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">AI-powered analysis of kidney medical images</p>', unsafe_allow_html=True)
+def show_detection_page():
+    """Display the detection page with minimalist UI."""
+    st.title("🔍 Kidney Abnormality Detection")
     
-    # Main content area
-    # Step 1: View Selection
-    st.markdown('<div class="view-selection">', unsafe_allow_html=True)
-    st.markdown('#### <i class="fas fa-list-ol section-icon"></i>Select Image View Type', unsafe_allow_html=True)
+    # Initialize app
+    app = KidneyDetectionApp()
     
-    view_type = st.radio(
-        "Choose the type of kidney image view:",
-        options=['coronal', 'axial'],
-        format_func=lambda x: f"{x.title()} View",
-        help="Coronal: Front-to-back view | Axial: Top-to-bottom cross-section",
-        key="detection_view_type"
-    )
+    # Create two columns for layout
+    col1, col2 = st.columns([2, 1])
     
-    # Display view type information
-    if view_type == 'coronal':
-        st.info("📐 **Coronal View**: Shows the kidney from front to back, displaying the overall shape and structure.")
-    else:
-        st.info("📐 **Axial View**: Shows cross-sectional slices from top to bottom, revealing internal structures.")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Step 2: Image Upload
-    st.markdown('<div class="upload-section">', unsafe_allow_html=True)
-    st.markdown('#### <i class="fas fa-upload section-icon"></i>Upload Medical Image', unsafe_allow_html=True)
-    
-    uploaded_file = st.file_uploader(
-        "Choose a kidney medical image file",
-        type=app.supported_formats,
-        help=f"Supported formats: {', '.join(app.supported_formats)}. Max size: 10MB"
-    )
-    
-    if uploaded_file is not None:
-        # Validate the uploaded file
-        is_valid, error_message = app.validate_image(uploaded_file)
+    with col1:
+        # Image upload section
+        st.subheader("Upload Medical Image")
+        uploaded_file = st.file_uploader(
+            "Choose a medical image file",
+            type=['png', 'jpg', 'jpeg', 'tiff', 'bmp'],
+            help="Supported formats: PNG, JPG, JPEG, TIFF, BMP (Max 10MB)"
+        )
         
-        if not is_valid:
-            st.error(f"❌ {error_message}")
-            return
-        
-        try:
-            # Load and display the image
+        if uploaded_file is not None:
+            # Validate image
+            is_valid, message = app.validate_image(uploaded_file)
+            
+            if not is_valid:
+                st.error(message)
+                return
+            
+            # Load and display image
             image = Image.open(uploaded_file)
-            
-            st.success("✅ Image uploaded successfully!")
-            
-            # Display image preview
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col2:
-                st.image(image, caption=f"Preview - {view_type.title()} View", use_column_width=True)
-            
-            # Analysis button
-            if st.button("Analyze Image", type="primary", use_container_width=True):
-                with st.spinner("Analyzing image... This may take a few moments."):
-                    # Perform prediction
-                    results = app.predict_abnormality(image, view_type)
-                    
-                    # Display results
-                    app.display_results(results, image)
-                    
-        except Exception as e:
-            st.error(f"❌ Error processing image: {str(e)}")
+            st.image(image, caption="Uploaded Image", use_container_width=True)
     
-    else:
-        st.info("👆 Please upload a medical image to begin analysis")
+    with col2:
+        # View type selection
+        st.subheader("Image View Type")
+        
+        view_type = st.selectbox(
+            "Select View",
+            options=['coronal', 'axial'],
+            help="Select the anatomical view of the image",
+            key="view_type_select"
+        )
+        
+        # Set default parameters
+        confidence_threshold = 0.5
+        selected_classes = ['kidney', 'cyst', 'stone', 'tumor']
+        roi = (0.0, 0.0, 1.0, 1.0)
+        
+        # Analysis button
+        analyze_button = st.button(
+            "🔍 Analyze Image",
+            type="primary",
+            use_container_width=True,
+            disabled=uploaded_file is None
+        )
     
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Analysis results
+    if uploaded_file is not None and analyze_button:
+        with st.spinner("Loading model and analyzing image..."):
+            # Load appropriate model
+            model = app.load_yolo_model(view_type)
+            
+            # Process image
+            annotated_image, detections = app.process_with_yolo(
+                image, model, confidence_threshold, selected_classes, roi
+            )
+            
+            # Display results
+            st.subheader("Analysis Results")
+            
+            # Color legend
+            st.markdown("""
+            **Detection Color Legend:**
+            - 🔴 **Red**: Kidney
+            - 🔵 **Blue**: Cyst  
+            - 🟡 **Yellow**: Stone
+            - 🟣 **Purple**: Tumor
+            """)
+            
+            # Show annotated image
+            col_result1, col_result2 = st.columns([3, 1])
+            
+            with col_result1:
+                st.image(annotated_image, caption="Processed Image", use_container_width=True)
+            
+            with col_result2:
+                # Detection summary
+                st.metric("Total Detections", len(detections))
+                
+                if detections:
+                    st.subheader("Detected Objects")
+                    for i, detection in enumerate(detections):
+                        with st.expander(f"{detection['class'].title()} #{i+1}"):
+                            st.write(f"**Confidence:** {detection['confidence']:.2f}")
+                            st.write(f"**Class:** {detection['class']}")
+                            bbox = detection['bbox']
+                            st.write(f"**Location:** ({bbox[0]:.2f}, {bbox[1]:.2f}) to ({bbox[2]:.2f}, {bbox[3]:.2f})")
+                else:
+                    st.info("No abnormalities detected with current settings.")
+                
+                # Model info
+                st.subheader("Model Info")
+                st.write(f"**View Type:** {view_type.title()}")
+                st.write(f"**Model Status:** {'Loaded' if model else 'Placeholder'}")
+                
+                if not model:
+                    st.warning("Using placeholder detection. Load actual YOLO models for real analysis.")
+
     
     # Footer
     st.markdown("---")
     st.markdown(
-        "<p style='text-align: center; color: #666;'>Built with <i class='fas fa-heart' style='color: #e74c3c;'></i> using Streamlit | For educational purposes only</p>",
+        "<p style='text-align: center; color: #666; font-size: 0.8rem;'>Built with Streamlit | For educational purposes only</p>",
         unsafe_allow_html=True
     )
 
