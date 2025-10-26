@@ -962,12 +962,35 @@ def main():
         show_detection_page()
 
 def show_detection_page():
-    """Display the detection page with minimalist UI."""
+    """Display the detection page with batch processing and grid results."""
     st.title("🔍 Kidney Abnormality Detection")
     
     # Initialize app
     app = KidneyDetectionApp()
     
+    # Processing mode selection
+    st.subheader("📋 Detection Mode")
+    processing_mode = st.radio(
+        "Choose processing mode:",
+        ["Single Image", "Batch Processing"],
+        horizontal=True,
+        help="Single Image: Process one image at a time. Batch Processing: Process multiple images of the same view type."
+    )
+    
+    if processing_mode == "Single Image":
+        show_single_image_detection(app)
+    else:
+        show_batch_detection(app)
+    
+    # Footer
+    st.markdown("---")
+    st.markdown(
+        "<p style='text-align: center; color: #666; font-size: 0.8rem;'>Built with Streamlit | For educational purposes only</p>",
+        unsafe_allow_html=True
+    )
+
+def show_single_image_detection(app):
+    """Display single image detection interface."""
     # Create two columns for layout
     col1, col2 = st.columns([2, 1])
     
@@ -977,7 +1000,8 @@ def show_detection_page():
         uploaded_file = st.file_uploader(
             "Choose a medical image file",
             type=['png', 'jpg', 'jpeg', 'tiff', 'bmp'],
-            help="Supported formats: PNG, JPG, JPEG, TIFF, BMP (Max 10MB)"
+            help="Supported formats: PNG, JPG, JPEG, TIFF, BMP (Max 10MB)",
+            key="single_upload"
         )
         
         if uploaded_file is not None:
@@ -1000,7 +1024,7 @@ def show_detection_page():
             "Select View",
             options=['coronal', 'axial'],
             help="Select the anatomical view of the image",
-            key="view_type_select"
+            key="single_view_type_select"
         )
         
         # Set default parameters
@@ -1013,7 +1037,8 @@ def show_detection_page():
             "🔍 Analyze Image",
             type="primary",
             width="stretch",
-            disabled=uploaded_file is None
+            disabled=uploaded_file is None,
+            key="single_analyze"
         )
     
     # Analysis results
@@ -1028,53 +1053,275 @@ def show_detection_page():
             )
             
             # Display results
-            st.subheader("Analysis Results")
-            
-            # Color legend
-            st.markdown("""
-            **Detection Color Legend:**
-            - 🔴 **Red**: Kidney
-            - 🔵 **Blue**: Cyst  
-            - 🟠 **Orange**: Stone
-            - 🟣 **Purple**: Tumor
-            """)
-            
-            # Show annotated image
-            col_result1, col_result2 = st.columns([3, 1])
-            
-            with col_result1:
-                st.image(annotated_image, caption="Processed Image", width="stretch")
-            
-            with col_result2:
-                # Detection summary
-                st.metric("Total Detections", len(detections))
-                
-                if detections:
-                    st.subheader("Detected Objects")
-                    for i, detection in enumerate(detections):
-                        with st.expander(f"{detection['class'].title()} #{i+1}"):
-                            st.write(f"**Confidence:** {detection['confidence']:.2f}")
-                            st.write(f"**Class:** {detection['class']}")
-                            bbox = detection['bbox']
-                            st.write(f"**Location:** ({bbox[0]:.2f}, {bbox[1]:.2f}) to ({bbox[2]:.2f}, {bbox[3]:.2f})")
-                else:
-                    st.info("No abnormalities detected with current settings.")
-                
-                # Model info
-                st.subheader("Model Info")
-                st.write(f"**View Type:** {view_type.title()}")
-                st.write(f"**Model Status:** {'Loaded' if model else 'Placeholder'}")
-                
-                if not model:
-                    st.warning("Using placeholder detection. Load actual YOLO models for real analysis.")
+            display_single_result(annotated_image, detections, view_type, model)
 
+def show_batch_detection(app):
+    """Display batch processing interface."""
+    st.subheader("📁 Batch Image Upload")
     
-    # Footer
-    st.markdown("---")
-    st.markdown(
-        "<p style='text-align: center; color: #666; font-size: 0.8rem;'>Built with Streamlit | For educational purposes only</p>",
-        unsafe_allow_html=True
-    )
+    # Create columns for batch upload
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        # Multiple file uploader
+        uploaded_files = st.file_uploader(
+            "Choose multiple medical image files",
+            type=['png', 'jpg', 'jpeg', 'tiff', 'bmp'],
+            accept_multiple_files=True,
+            help="Upload multiple images of the same view type. Supported formats: PNG, JPG, JPEG, TIFF, BMP (Max 10MB each)",
+            key="batch_upload"
+        )
+        
+        if uploaded_files:
+            st.info(f"📊 {len(uploaded_files)} images uploaded")
+            
+            # Show preview of uploaded images
+            if len(uploaded_files) <= 4:
+                cols = st.columns(len(uploaded_files))
+                for i, file in enumerate(uploaded_files):
+                    with cols[i]:
+                        image = Image.open(file)
+                        st.image(image, caption=f"Image {i+1}", width=150)
+            else:
+                st.info("Preview showing first 4 images...")
+                cols = st.columns(4)
+                for i in range(4):
+                    with cols[i]:
+                        image = Image.open(uploaded_files[i])
+                        st.image(image, caption=f"Image {i+1}", width=150)
+    
+    with col2:
+        # View type selection for batch
+        st.subheader("Batch Settings")
+        
+        view_type = st.selectbox(
+            "Select View Type",
+            options=['coronal', 'axial'],
+            help="All uploaded images should be of the same view type",
+            key="batch_view_type_select"
+        )
+        
+        # Batch processing options
+        st.subheader("Processing Options")
+        
+        confidence_threshold = st.slider(
+            "Confidence Threshold",
+            min_value=0.1,
+            max_value=1.0,
+            value=0.5,
+            step=0.1,
+            help="Minimum confidence for detections"
+        )
+        
+        grid_columns = st.selectbox(
+            "Grid Layout",
+            options=[2, 3, 4],
+            index=1,  # Default to 3 columns
+            help="Number of columns in results grid"
+        )
+        
+        # Batch analysis button
+        batch_analyze_button = st.button(
+            "🔍 Analyze All Images",
+            type="primary",
+            width="stretch",
+            disabled=not uploaded_files,
+            key="batch_analyze"
+        )
+    
+    # Batch analysis results
+    if uploaded_files and batch_analyze_button:
+        process_batch_images(app, uploaded_files, view_type, confidence_threshold, grid_columns)
+
+def process_batch_images(app, uploaded_files, view_type, confidence_threshold, grid_columns):
+    """Process multiple images and display results in grid format."""
+    st.subheader("🔬 Batch Analysis Results")
+    
+    # Set default parameters
+    selected_classes = ['kidney', 'cyst', 'stone', 'tumor']
+    roi = (0.0, 0.0, 1.0, 1.0)
+    
+    # Load model once for all images
+    with st.spinner("Loading model..."):
+        model = app.load_yolo_model(view_type)
+    
+    # Process all images
+    results = []
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    for i, uploaded_file in enumerate(uploaded_files):
+        status_text.text(f"Processing image {i+1}/{len(uploaded_files)}: {uploaded_file.name}")
+        
+        # Validate and process image
+        is_valid, message = app.validate_image(uploaded_file)
+        
+        if is_valid:
+            image = Image.open(uploaded_file)
+            annotated_image, detections = app.process_with_yolo(
+                image, model, confidence_threshold, selected_classes, roi
+            )
+            
+            results.append({
+                'filename': uploaded_file.name,
+                'original_image': image,
+                'annotated_image': annotated_image,
+                'detections': detections,
+                'valid': True
+            })
+        else:
+            results.append({
+                'filename': uploaded_file.name,
+                'error': message,
+                'valid': False
+            })
+        
+        # Update progress
+        progress_bar.progress((i + 1) / len(uploaded_files))
+    
+    status_text.text("✅ Processing complete!")
+    
+    # Display results in grid format
+    display_batch_results(results, view_type, model, grid_columns)
+
+def display_single_result(annotated_image, detections, view_type, model):
+    """Display results for single image analysis."""
+    st.subheader("Analysis Results")
+    
+    # Color legend
+    st.markdown("""
+    **Detection Color Legend:**
+    - 🔴 **Red**: Kidney
+    - 🔵 **Blue**: Cyst  
+    - 🟠 **Orange**: Stone
+    - 🟣 **Purple**: Tumor
+    """)
+    
+    # Show annotated image
+    col_result1, col_result2 = st.columns([3, 1])
+    
+    with col_result1:
+        st.image(annotated_image, caption="Processed Image", width="stretch")
+    
+    with col_result2:
+        # Detection summary
+        st.metric("Total Detections", len(detections))
+        
+        if detections:
+            st.subheader("Detected Objects")
+            for i, detection in enumerate(detections):
+                with st.expander(f"{detection['class'].title()} #{i+1}"):
+                    st.write(f"**Confidence:** {detection['confidence']:.2f}")
+                    st.write(f"**Class:** {detection['class']}")
+                    bbox = detection['bbox']
+                    st.write(f"**Location:** ({bbox[0]:.2f}, {bbox[1]:.2f}) to ({bbox[2]:.2f}, {bbox[3]:.2f})")
+        else:
+            st.info("No abnormalities detected with current settings.")
+        
+        # Model info
+        st.subheader("Model Info")
+        st.write(f"**View Type:** {view_type.title()}")
+        st.write(f"**Model Status:** {'Loaded' if model else 'Placeholder'}")
+        
+        if not model:
+            st.warning("Using placeholder detection. Load actual YOLO models for real analysis.")
+
+def display_batch_results(results, view_type, model, grid_columns):
+    """Display batch processing results in grid format."""
+    # Summary statistics
+    valid_results = [r for r in results if r['valid']]
+    total_detections = sum(len(r['detections']) for r in valid_results)
+    
+    # Summary metrics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Images Processed", len(results))
+    with col2:
+        st.metric("Successful", len(valid_results))
+    with col3:
+        st.metric("Total Detections", total_detections)
+    with col4:
+        st.metric("Avg per Image", f"{total_detections/max(len(valid_results), 1):.1f}")
+    
+    # Color legend
+    st.markdown("""
+    **Detection Color Legend:**
+    - 🔴 **Red**: Kidney | 🔵 **Blue**: Cyst | 🟠 **Orange**: Stone | 🟣 **Purple**: Tumor
+    """)
+    
+    # Display results in grid
+    st.subheader("📊 Grid Results")
+    
+    # Create grid layout
+    for i in range(0, len(results), grid_columns):
+        cols = st.columns(grid_columns)
+        
+        for j in range(grid_columns):
+            if i + j < len(results):
+                result = results[i + j]
+                
+                with cols[j]:
+                    if result['valid']:
+                        # Show annotated image
+                        st.image(
+                            result['annotated_image'], 
+                            caption=f"{result['filename'][:20]}...",
+                            width="stretch"
+                        )
+                        
+                        # Detection count
+                        detection_count = len(result['detections'])
+                        if detection_count > 0:
+                            st.success(f"✅ {detection_count} detections")
+                            
+                            # Show detection details in expander
+                            with st.expander("View Details"):
+                                for k, detection in enumerate(result['detections']):
+                                    st.write(f"**{detection['class'].title()}**: {detection['confidence']:.2f}")
+                        else:
+                            st.info("No detections")
+                    else:
+                        # Show error
+                        st.error(f"❌ {result['filename']}")
+                        st.write(result['error'])
+    
+    # Detailed summary
+    if valid_results:
+        st.subheader("📈 Detection Summary")
+        
+        # Count detections by class
+        class_counts = {}
+        for result in valid_results:
+            for detection in result['detections']:
+                class_name = detection['class']
+                class_counts[class_name] = class_counts.get(class_name, 0) + 1
+        
+        if class_counts:
+            # Display class distribution
+            col1, col2 = st.columns([1, 1])
+            
+            with col1:
+                st.write("**Detection Distribution:**")
+                for class_name, count in class_counts.items():
+                    percentage = (count / total_detections) * 100
+                    st.write(f"- {class_name.title()}: {count} ({percentage:.1f}%)")
+            
+            with col2:
+                # Create a simple bar chart data
+                chart_data = pd.DataFrame({
+                    'Class': list(class_counts.keys()),
+                    'Count': list(class_counts.values())
+                })
+                st.bar_chart(chart_data.set_index('Class'))
+    
+    # Model info
+    st.subheader("ℹ️ Processing Info")
+    st.write(f"**View Type:** {view_type.title()}")
+    st.write(f"**Model Status:** {'Loaded' if model else 'Placeholder'}")
+    st.write(f"**Grid Layout:** {grid_columns} columns")
+    
+    if not model:
+        st.warning("Using placeholder detection. Load actual YOLO models for real analysis.")
 
 if __name__ == "__main__":
     main()
