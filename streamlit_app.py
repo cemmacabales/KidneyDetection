@@ -112,26 +112,17 @@ st.markdown("""
 def check_ultralytics_availability():
     """Check if ultralytics is available and return status info."""
     try:
-        # First check if opencv is properly configured
-        import cv2
-        # Test if opencv is headless
-        if hasattr(cv2, 'imshow'):
-            # This means GUI version is installed, which can cause issues
-            pass
-        
         import ultralytics
         return True, f"✅ ultralytics {ultralytics.__version__} is available"
     except ImportError as e:
         error_msg = str(e)
-        if "libGL.so.1" in error_msg or "cannot open shared object file" in error_msg:
-            return False, "❌ OpenGL library missing - Streamlit Cloud deployment issue detected"
-        elif "cv2" in error_msg:
-            return False, "❌ OpenCV import failed - check opencv-python-headless installation"
+        if "libGL.so.1" in error_msg:
+            return False, "❌ OpenGL library missing - using opencv-python-headless should fix this"
         return False, f"❌ ultralytics import failed: {error_msg}"
     except Exception as e:
         error_msg = str(e)
-        if "libGL.so.1" in error_msg or "cannot open shared object file" in error_msg:
-            return False, "❌ OpenGL library missing - headless environment detected"
+        if "libGL.so.1" in error_msg:
+            return False, "❌ OpenGL library missing - deployment environment issue"
         return False, f"❌ ultralytics error: {error_msg}"
 
 # Check ultralytics status
@@ -145,19 +136,9 @@ if ultralytics_available:
     st.sidebar.success(ultralytics_status)
 else:
     st.sidebar.error(ultralytics_status)
-    if "OpenGL library missing" in ultralytics_status or "Streamlit Cloud" in ultralytics_status:
-        st.sidebar.warning("🚨 **Streamlit Cloud Deployment Issue**")
-        st.sidebar.info("**Root Cause:** ultralytics requires OpenGL libraries not available in headless environments")
-        st.sidebar.info("**Solution Applied:**")
-        st.sidebar.code("opencv-python-headless>=4.8.0")
-        st.sidebar.info("**Next Steps:**")
-        st.sidebar.info("1. 🔄 Redeploy the app on Streamlit Cloud")
-        st.sidebar.info("2. 🧹 Clear browser cache")
-        st.sidebar.info("3. ⏱️ Wait 2-3 minutes for dependencies to install")
-        st.sidebar.info("**Note:** The app will use placeholder detection until this is resolved.")
-    elif "OpenCV import failed" in ultralytics_status:
-        st.sidebar.warning("🔧 **OpenCV Configuration Issue**")
-        st.sidebar.info("Check that opencv-python-headless is properly installed")
+    if "OpenGL library missing" in ultralytics_status:
+        st.sidebar.info("🔧 This is a known deployment issue. The fix has been applied to requirements.txt")
+        st.sidebar.info("🔄 Please redeploy or refresh the page.")
     else:
         st.sidebar.info("🔄 Try refreshing the page if this persists.")
 
