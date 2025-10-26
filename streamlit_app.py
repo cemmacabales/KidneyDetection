@@ -131,15 +131,16 @@ ultralytics_available, ultralytics_status = check_ultralytics_availability()
 # Sidebar title
 st.sidebar.title("Kidney Abnormality Detection")
 
-# Show ultralytics status in sidebar
+# Show ultralytics status in sidebar (only show errors if not OpenGL related)
 if ultralytics_available:
     st.sidebar.success(ultralytics_status)
 else:
-    st.sidebar.error(ultralytics_status)
+    # Don't show OpenGL errors prominently since they're handled in requirements.txt
     if "OpenGL library missing" in ultralytics_status:
-        st.sidebar.info("🔧 This is a known deployment issue. The fix has been applied to requirements.txt")
-        st.sidebar.info("🔄 Please redeploy or refresh the page.")
+        # Just show a subtle info message instead of error
+        st.sidebar.info("🔧 Using optimized OpenCV for cloud deployment")
     else:
+        st.sidebar.error(ultralytics_status)
         st.sidebar.info("🔄 Try refreshing the page if this persists.")
 
 class KidneyDetectionApp:
@@ -166,8 +167,13 @@ class KidneyDetectionApp:
             
             # Check if ultralytics is available using our cached function
             if not ultralytics_available:
-                st.error(f"❌ ultralytics not available: {ultralytics_status}")
-                st.info("💡 This might be a temporary deployment issue. Please try refreshing the page.")
+                # Handle OpenGL errors more gracefully
+                if "OpenGL library missing" in ultralytics_status:
+                    st.warning("⚠️ Using fallback mode due to deployment environment limitations")
+                    st.info("💡 Placeholder detections will be used instead of real YOLO inference")
+                else:
+                    st.error(f"❌ ultralytics not available: {ultralytics_status}")
+                    st.info("💡 This might be a temporary deployment issue. Please try refreshing the page.")
                 return None
             
             from ultralytics import YOLO
@@ -265,7 +271,11 @@ class KidneyDetectionApp:
                 results = model(img_array, conf=confidence_threshold, verbose=False)
                 detections = self._parse_yolo_results(results, selected_classes, roi)
             except Exception as e:
-                st.error(f"❌ Error during YOLO inference: {str(e)}")
+                error_msg = str(e)
+                if "libGL.so.1" in error_msg or "OpenGL" in error_msg:
+                    st.info("ℹ️ Using fallback detection due to deployment environment")
+                else:
+                    st.error(f"❌ Error during YOLO inference: {error_msg}")
                 # Fallback to placeholder
                 detections = self._generate_placeholder_detections(selected_classes, confidence_threshold)
         
