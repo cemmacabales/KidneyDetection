@@ -4,13 +4,25 @@ pandas>=2.0.0
 Pillow>=10.0.0
 typing-extensions>=4.5.0
 
-# OpenCV headless version for cloud deployment (must be before ultralytics)
-opencv-python-headless>=4.8.0
+# OpenCV headless version for cloud deployment (CRITICAL: must be installed first)
+opencv-python-headless>=4.8.0,<5.0.0
+opencv-contrib-python-headless>=4.8.0,<5.0.0
 
-# YOLO model dependencies
-ultralytics>=8.0.0
+# PyTorch dependencies (install before ultralytics)
 torch>=2.0.0
 torchvision>=0.15.0
-scikit-image>=0.21.0
+
+# Ultralytics dependencies (manually specified to avoid opencv-python conflict)
+ultralytics>=8.0.0
+PyYAML>=5.3.1
+requests>=2.23.0
 matplotlib>=3.7.0
+tqdm>=4.64.0
+psutil
+py-cpuinfo
+thop>=0.1.1
 seaborn>=0.12.0
+scikit-image>=0.21.0
+
+# Additional scientific computing
+scipy>=1.10.0
