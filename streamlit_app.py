@@ -332,6 +332,7 @@ class KidneyDetectionApp:
             for result in results:
                 if result.boxes is not None:
                     boxes = result.boxes
+                    masks = getattr(result, 'masks', None)  # Check if segmentation masks are available
                     
                     for i in range(len(boxes)):
                         # Get bounding box coordinates (normalized)
@@ -353,11 +354,22 @@ class KidneyDetectionApp:
                             center_y = (y1 + y2) / 2
                             
                             if (roi_x1 <= center_x <= roi_x2 and roi_y1 <= center_y <= roi_y2):
-                                detections.append({
+                                detection = {
                                     'class': class_name,
                                     'confidence': round(confidence, 3),
                                     'bbox': [float(x1), float(y1), float(x2), float(y2)]
-                                })
+                                }
+                                
+                                # Add segmentation mask if available
+                                if masks is not None and i < len(masks.data):
+                                    try:
+                                        # Get the mask for this detection (normalized coordinates)
+                                        mask = masks.data[i].cpu().numpy()  # Shape: (H, W)
+                                        detection['mask'] = mask
+                                    except Exception as mask_error:
+                                        st.info(f"ℹ️ Could not extract mask for {class_name}: {str(mask_error)}")
+                                
+                                detections.append(detection)
         
         except Exception as e:
             st.warning(f"⚠️ Error parsing YOLO results: {str(e)}")
@@ -366,17 +378,96 @@ class KidneyDetectionApp:
     
     def _draw_detections(self, image: Image.Image, detections: list, 
                         roi: Tuple[float, float, float, float]) -> Image.Image:
-        """Draw bounding boxes and labels on image."""
+        """Draw bounding boxes, masks, and labels on image."""
         from PIL import ImageDraw, ImageFont
         
         # Create a copy of the image and ensure it's in RGB mode for colored annotations
         annotated_image = image.copy()
         if annotated_image.mode != 'RGB':
             annotated_image = annotated_image.convert('RGB')
-        draw = ImageDraw.Draw(annotated_image)
         
         # Get image dimensions
         img_width, img_height = image.size
+        
+        # Create a transparent overlay for masks
+        mask_overlay = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
+        mask_draw = ImageDraw.Draw(mask_overlay)
+        
+        # Color map for different classes (RGB values)
+        colors = {
+            'kidney': (255, 0, 0),    # Red
+            'cyst': (0, 0, 255),      # Blue
+            'stone': (255, 165, 0),   # Orange
+            'tumor': (128, 0, 128)    # Purple
+        }
+        
+        # Color map for outline (string format for PIL)
+        outline_colors = {
+            'kidney': 'red',
+            'cyst': 'blue', 
+            'stone': 'orange',
+            'tumor': 'purple'
+        }
+        
+        # Draw semi-transparent masks first
+        for detection in detections:
+            bbox = detection['bbox']
+            class_name = detection['class']
+            
+            # Get color for this class
+            color_rgb = colors.get(class_name, (255, 255, 255))
+            mask_color = color_rgb + (77,)  # 77 = 30% of 255 for alpha
+            
+            # Check if we have an actual segmentation mask
+            if 'mask' in detection:
+                try:
+                    # Use actual segmentation mask
+                    mask = detection['mask']
+                    
+                    # Resize mask to match image dimensions if needed
+                    if mask.shape != (img_height, img_width):
+                        from PIL import Image as PILImage
+                        mask_img = PILImage.fromarray((mask * 255).astype(np.uint8))
+                        mask_img = mask_img.resize((img_width, img_height), PILImage.NEAREST)
+                        mask = np.array(mask_img) / 255.0
+                    
+                    # Create colored mask overlay using numpy for better performance
+                    mask_binary = (mask > 0.5).astype(np.uint8)
+                    
+                    # Apply mask directly to the overlay using numpy
+                    mask_overlay_array = np.array(mask_overlay)
+                    mask_indices = np.where(mask_binary == 1)
+                    
+                    if len(mask_indices[0]) > 0:  # Only if there are mask pixels
+                        mask_overlay_array[mask_indices[0], mask_indices[1]] = mask_color
+                        mask_overlay = Image.fromarray(mask_overlay_array, 'RGBA')
+                                
+                except Exception as e:
+                    st.info(f"ℹ️ Using bounding box for {class_name} due to mask error: {str(e)}")
+                    # Fallback to rectangular mask
+                    x1 = int(bbox[0] * img_width)
+                    y1 = int(bbox[1] * img_height)
+                    x2 = int(bbox[2] * img_width)
+                    y2 = int(bbox[3] * img_height)
+                    mask_draw.rectangle([x1, y1, x2, y2], fill=mask_color)
+            else:
+                # Fallback to rectangular mask when no segmentation mask is available
+                x1 = int(bbox[0] * img_width)
+                y1 = int(bbox[1] * img_height)
+                x2 = int(bbox[2] * img_width)
+                y2 = int(bbox[3] * img_height)
+                mask_draw.rectangle([x1, y1, x2, y2], fill=mask_color)
+        
+        # Blend the mask overlay with the original image
+        if annotated_image.mode != 'RGBA':
+            annotated_image = annotated_image.convert('RGBA')
+        
+        # Composite the mask overlay onto the image
+        annotated_image = Image.alpha_composite(annotated_image, mask_overlay)
+        
+        # Convert back to RGB for drawing operations
+        annotated_image = annotated_image.convert('RGB')
+        draw = ImageDraw.Draw(annotated_image)
         
         # Draw ROI rectangle
         x_min, y_min, x_max, y_max = roi
@@ -386,15 +477,7 @@ class KidneyDetectionApp:
         ]
         draw.rectangle(roi_coords, outline='green', width=3)
         
-        # Color map for different classes
-        colors = {
-            'kidney': 'red',
-            'cyst': 'blue', 
-            'stone': 'orange',
-            'tumor': 'purple'
-        }
-        
-        # Draw detections
+        # Draw bounding boxes and labels
         for detection in detections:
             bbox = detection['bbox']
             class_name = detection['class']
@@ -407,7 +490,7 @@ class KidneyDetectionApp:
             y2 = bbox[3] * img_height
             
             # Draw bounding box with thicker outline
-            color = colors.get(class_name, 'white')
+            color = outline_colors.get(class_name, 'white')
             draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
             
             # Draw label with background for better visibility
