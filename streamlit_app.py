@@ -770,7 +770,7 @@ def show_model_page():
     """Display the Model page."""
     st.markdown('<h1 class="main-header">🤖 Model Architecture</h1>', unsafe_allow_html=True)
     
-    tab1, tab2, tab3 = st.tabs(["Architecture", "Performance", "Technical Details"])
+    tab1, tab2 = st.tabs(["Architecture", "Technical Details"])
     
     with tab1:
         st.subheader("Deep Learning Architecture")
@@ -837,41 +837,6 @@ def show_model_page():
             """)
     
     with tab2:
-        st.subheader("Performance Metrics")
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric("Accuracy", "92.5%", "↑ 2.3%")
-        with col2:
-            st.metric("Sensitivity", "89.3%", "↑ 1.8%")
-        with col3:
-            st.metric("Specificity", "94.7%", "↑ 2.1%")
-        with col4:
-            st.metric("F1-Score", "91.2%", "↑ 2.0%")
-        
-        st.markdown("""
-        ### Detailed Performance Analysis
-        
-        **Cross-Validation Results** (5-fold):
-        - Mean Accuracy: 92.5% ± 1.2%
-        - Mean Sensitivity: 89.3% ± 2.1%
-        - Mean Specificity: 94.7% ± 1.5%
-        
-        **Per-Condition Performance**:
-        - Normal Detection: 95.2% accuracy
-        - Kidney Stones: 88.7% accuracy
-        - Cysts: 91.3% accuracy
-        - Tumors: 89.8% accuracy
-        - Structural Abnormalities: 87.9% accuracy
-        
-        **Processing Speed**:
-        - Average Inference Time: 2.3 seconds
-        - GPU Acceleration: 0.8 seconds
-        - Batch Processing: 50 images/minute
-        """)
-    
-    with tab3:
         st.subheader("Technical Implementation")
         
         col1, col2 = st.columns(2)
