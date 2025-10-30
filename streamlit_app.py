@@ -108,7 +108,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Early check for ultralytics availability
-@st.cache_data
 def check_ultralytics_availability():
     """Check if ultralytics is available and return status info."""
     try:
@@ -125,11 +124,11 @@ def check_ultralytics_availability():
             return False, "❌ OpenGL library missing - deployment environment issue"
         return False, f"❌ ultralytics error: {error_msg}"
 
-# Check ultralytics status
-ultralytics_available, ultralytics_status = check_ultralytics_availability()
-
 # Sidebar title
 st.sidebar.title("Kidney Abnormality Detection")
+
+# Check ultralytics status (runs on every app reload now)
+ultralytics_available, ultralytics_status = check_ultralytics_availability()
 
 # Show ultralytics status in sidebar (only show errors if not OpenGL related)
 if ultralytics_available:
@@ -141,7 +140,11 @@ else:
         st.sidebar.info("🔧 Using optimized OpenCV for cloud deployment")
     else:
         st.sidebar.error(ultralytics_status)
-        st.sidebar.info("🔄 Try refreshing the page if this persists.")
+        st.sidebar.info("🔄 Try refreshing the page or use the recheck button below.")
+    
+    # Add manual recheck button only when ultralytics is unavailable
+    if st.sidebar.button("🔄 Recheck Ultralytics", help="Force refresh ultralytics availability check"):
+        st.rerun()
 
 class KidneyDetectionApp:
     """Main application class for kidney abnormality detection."""
