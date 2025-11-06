@@ -116,12 +116,12 @@ def check_ultralytics_availability():
     except ImportError as e:
         error_msg = str(e)
         if "libGL.so.1" in error_msg:
-            return False, "❌ OpenGL library missing - using opencv-python-headless should fix this"
+            return False, "OpenGL library missing"
         return False, f"❌ ultralytics import failed: {error_msg}"
     except Exception as e:
         error_msg = str(e)
         if "libGL.so.1" in error_msg:
-            return False, "❌ OpenGL library missing - deployment environment issue"
+            return False, "OpenGL library missing"
         return False, f"❌ ultralytics error: {error_msg}"
 
 # Sidebar title
@@ -130,21 +130,19 @@ st.sidebar.title("Kidney Abnormality Detection")
 # Check ultralytics status (runs on every app reload now)
 ultralytics_available, ultralytics_status = check_ultralytics_availability()
 
-# Show ultralytics status in sidebar (only show errors if not OpenGL related)
+# Show ultralytics status in sidebar
 if ultralytics_available:
     st.sidebar.success(ultralytics_status)
 else:
-    # Don't show OpenGL errors prominently since they're handled in requirements.txt
     if "OpenGL library missing" in ultralytics_status:
-        # Just show a subtle info message instead of error
-        st.sidebar.info("🔧 Using optimized OpenCV for cloud deployment")
+        st.sidebar.info("🔧 Using optimized OpenCV for cloud deployment.")
+        st.sidebar.warning("Real-time detection is disabled due to a missing system dependency (OpenGL). The app will use placeholder detections instead.")
     else:
         st.sidebar.error(ultralytics_status)
-        st.sidebar.info("🔄 Try refreshing the page or use the recheck button below.")
-    
-    # Add manual recheck button only when ultralytics is unavailable
-    if st.sidebar.button("🔄 Recheck Ultralytics", help="Force refresh ultralytics availability check"):
-        st.rerun()
+        st.sidebar.info("🔄 This might be a temporary issue. Try refreshing the page or use the recheck button below.")
+        # Add manual recheck button only for non-OpenGL related errors
+        if st.sidebar.button("🔄 Recheck Ultralytics", help="Force refresh ultralytics availability check"):
+            st.rerun()
 
 class KidneyDetectionApp:
     """Main application class for kidney abnormality detection."""
