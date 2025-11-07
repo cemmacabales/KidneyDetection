@@ -128,7 +128,7 @@ def check_ultralytics_availability():
         return False, f"❌ ultralytics error: {error_msg}"
 
 # Sidebar title
-st.sidebar.title("Kidney Abnormality Detection")
+st.sidebar.title("Kidney Abnormality Detection using Deep Learning")
 
 # Check ultralytics status (runs on every app reload now)
 ultralytics_available, ultralytics_status = check_ultralytics_availability()
