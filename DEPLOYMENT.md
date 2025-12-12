@@ -61,6 +61,8 @@ This script checks:
 - ✅ Ultralytics compatibility
 - ✅ YOLO import functionality
 
+If you deploy on Streamlit Cloud, also ensure `packages.txt` is present so `libgl1` and `libglib2.0-0` are installed.
+
 Expected output for successful deployment:
 ```
 ✅ DEPLOYMENT CHECK PASSED

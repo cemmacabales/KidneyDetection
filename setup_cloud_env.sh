@@ -9,12 +9,12 @@ echo "📦 Removing opencv-python if it exists..."
 pip uninstall -y opencv-python opencv-contrib-python 2>/dev/null || true
 
 # Install opencv-python-headless first (before ultralytics)
-echo "📦 Installing opencv-python-headless..."
-pip install opencv-python-headless>=4.8.0
+echo "📦 Installing opencv-python-headless (pinned)..."
+pip install --no-cache-dir opencv-python-headless==4.11.0.86
 
-# Install remaining dependencies
+# Install remaining dependencies (pinned in requirements.txt)
 echo "📦 Installing remaining dependencies..."
-pip install -r requirements.txt
+pip install --no-cache-dir -r requirements.txt
 
 # Verify installation
 echo ""

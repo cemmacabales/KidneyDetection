@@ -6,14 +6,14 @@ typing-extensions>=4.5.0
 
 # CRITICAL: OpenCV headless for cloud deployment (no GUI dependencies)
 # This MUST be installed before ultralytics to prevent opencv-python installation
-opencv-python-headless>=4.8.0
+opencv-python-headless==4.11.0.86  # pin exact headless build to satisfy ultralytics without GUI deps
 
 # YOLO model dependencies
 # Note: ultralytics may try to install opencv-python, but opencv-python-headless
 # should satisfy the opencv requirement
-ultralytics>=8.0.0
-torch>=2.0.0
-torchvision>=0.15.0
+ultralytics==8.3.236
+torch==2.9.1
+torchvision==0.24.1
 scikit-image>=0.21.0
 
 # Matplotlib with non-GUI backend
