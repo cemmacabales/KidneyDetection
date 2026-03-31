@@ -10,22 +10,6 @@ import base64
 from typing import Optional, Tuple, Dict, Any
 import datasetvalues as dv
 
-# Auto-fix: Ensure headless OpenCV is used in cloud environments where libGL is missing
-import sys
-import subprocess
-try:
-    import cv2
-except ImportError as e:
-    if "libGL.so.1" in str(e) or "libgthread" in str(e):
-        try:
-            print("⚠️ libGL missing: Force removing GUI OpenCV and reinstalling headless...", flush=True)
-            subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python", "opencv-contrib-python", "opencv-python-headless", "opencv-contrib-python-headless"])
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "opencv-python-headless==4.11.0.86"])
-            if "cv2" in sys.modules:
-                del sys.modules["cv2"]
-        except Exception as fix_e:
-            print(f"Failed to auto-fix OpenCV: {fix_e}", flush=True)
-
 # Configure page
 st.set_page_config(
     page_title="Kidney Abnormality Detection",
